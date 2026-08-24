@@ -1,0 +1,18 @@
+services:
+  ipfs:
+    image: ipfs/kubo:v0.34.1
+    container_name: university-incident-ipfs
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+      - "8080:8080"
+    volumes:
+      - ipfs-data:/data/ipfs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- --post-data='' http://127.0.0.1:5001/api/v0/version >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  ipfs-data:

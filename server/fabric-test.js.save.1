@@ -1,0 +1,138 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+x
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const fs = require("fs");
+const crypto = require("crypto");
+const grpc = require("@grpc/grpc-js");
+const { connect, signers } = require("@hyperledger/fabric-gateway");
+
+const FABRIC_BASE = "/mnt/c/Hyperledger/fabric-samples/test-network";
+
+const certPath =
+    `${FABRIC_BASE}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/cert.pem`;
+
+const keyDir =
+    `${FABRIC_BASE}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore`;
+
+const tlsCertPath =
+    `${FABRIC_BASE}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt`;
+
+const keyFile = fs.readdirSync(keyDir).find(file => file.endsWith("_sk"));
+
+if (!keyFile) {
+    throw new Error("Private key not found");
+}
+
+const credentials = fs.readFileSync(certPath);
+const privateKeyPem = fs.readFileSync(`${keyDir}/${keyFile}`);
+const privateKey = crypto.createPrivateKey(privateKeyPem);
+const tlsRootCert = fs.readFileSync(tlsCertPath);
+
+const signer = signers.newPrivateKeySigner(privateKey);
+
+const tlsCredentials = grpc.credentials.createSsl(tlsRootCert);
+
+const client = new grpc.Client(
+    "localhost:7051",
+    tlsCredentials
+);
+
+async function main() {
+    const gateway = connect({
+        client,
+        identity: {
+            mspId: "Org1MSP",
+            credentials
+        },
+        signer
+    });
+
+    try {
+        const network = gateway.getNetwork("mychannel");
+        const contract = network.getContract("incident-contract");
+
+        const result = await contract.evaluateTransaction(
+            "ReadIncident",
+            "INC-TEST-001"
+        );
+
+        console.log("\nFabric connection successful!\n");
+        console.log(result.toString());
+
+    } finally {
+        gateway.close();
+        client.close();
+    }
+}
+
+main().catch((error) => {
+    console.error("\nFabric connection failed:\n");
+    console.error(error);
+    process.exit(1);
+});
