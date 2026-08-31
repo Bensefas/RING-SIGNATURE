@@ -1,25 +1,21 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import Layout from "../components/Layout";
 
 const API="http://localhost:5000";
 
-function MyAssignments({ user,onLogout }) {
+function MyAssignments({ user,onLogout,onBack }) {
 
   const [assignments,setAssignments]=useState([]);
 
-  useEffect(()=>{
-    loadAssignments();
-  },[]);
-
-  const loadAssignments=async()=>{
+  const loadAssignments=useCallback(async()=>{
 
     try{
 
       const token=localStorage.getItem("token");
 
       const res=await axios.get(
-        `${API}/api/incidents/assigned`,
+        `${API}/api/assignments/my`,
         {
           headers:{
             Authorization:`Bearer ${token}`
@@ -34,11 +30,16 @@ function MyAssignments({ user,onLogout }) {
       console.error(err);
 
     }
-  };
+  },[]);
+
+  useEffect(()=>{ queueMicrotask(()=>{ void loadAssignments(); }); },[loadAssignments]);
 
   return(
     <Layout user={user} onLogout={onLogout}>
-      <h1>Assigned Investigations</h1>
+      <div style={styles.heading}>
+        <button type="button" style={styles.backButton} onClick={onBack}>Back to dashboard</button>
+        <h1>My Assigned Cases</h1>
+      </div>
 
       <div style={styles.grid}>
         {assignments.map(item=>(
@@ -62,6 +63,9 @@ const styles={
     gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",
     gap:20
   },
+
+  heading:{display:"flex",alignItems:"center",gap:16,marginBottom:20},
+  backButton:{border:"1px solid #CBD5E1",background:"white",padding:"8px 12px",borderRadius:8,cursor:"pointer"},
 
   card:{
     background:"white",

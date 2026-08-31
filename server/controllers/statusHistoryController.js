@@ -7,18 +7,18 @@ const getHistory = async (req, res) => {
     const result = await pool.query(
       `
       SELECT
-        h.id,
+        h.history_id,
         h.incident_id,
         h.previous_status,
         h.new_status,
         h.changed_by,
         h.comment,
         h.blockchain_tx_id,
-        h.created_at
+        h.changed_at AS created_at
       FROM incident_status_history h
-      JOIN incidents i ON i.id = h.incident_id
-      WHERE i.incident_id = $1 OR CAST(i.id AS TEXT) = $1
-      ORDER BY h.created_at ASC
+      JOIN incidents i ON i.incident_id = h.incident_id
+      WHERE i.incident_id = $1
+      ORDER BY h.changed_at ASC
       `,
       [incident_id]
     );

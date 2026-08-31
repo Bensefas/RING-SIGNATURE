@@ -56,20 +56,25 @@ function DisciplinaryDashboard({ user, onLogout, onNavigate }) {
 
   const total = incidents.length;
 
+  const statusIs = (incident, value) =>
+    String(incident.status_name || incident.status || "").toLowerCase() === value;
+
   const underReview = incidents.filter(
     (i) =>
-      i.status_name === "Under Investigation" ||
-      i.status_name === "Assigned"
+      statusIs(i, "under investigation") ||
+      statusIs(i, "investigating") ||
+      statusIs(i, "under review") ||
+      statusIs(i, "assigned")
   ).length;
 
   const resolved = incidents.filter(
-    (i) => i.status_name === "Resolved"
+    (i) => statusIs(i, "resolved") || statusIs(i, "closed")
   ).length;
 
   const pending = incidents.filter(
     (i) =>
-      i.status_name === "Submitted" ||
-      i.status_name === "Pending"
+      statusIs(i, "submitted") ||
+      statusIs(i, "pending")
   ).length;
 
   const critical = incidents.filter(
@@ -107,7 +112,7 @@ function DisciplinaryDashboard({ user, onLogout, onNavigate }) {
   };
 
   return (
-    <Layout user={user} onLogout={onLogout}>
+    <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
       <div style={styles.hero}>
         <div>
           <div style={styles.roleLabel}>

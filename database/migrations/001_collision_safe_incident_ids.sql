@@ -1,3 +1,3 @@
--- Replace the timestamp/random incident ID default with a collision-safe UUID-backed ID.
+-- Generate a readable, collision-safe text number without changing the UUID primary key.
 ALTER TABLE incidents
-  ALTER COLUMN incident_id SET DEFAULT ('INC-' || REPLACE(gen_random_uuid()::text, '-', ''));
+  ALTER COLUMN incident_number SET DEFAULT ('INC-' || REPLACE(gen_random_uuid()::text, '-', ''));

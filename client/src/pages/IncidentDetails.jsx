@@ -1,52 +1,7 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
-
-const API_URL = "http://localhost:5000/api";
-
 function IncidentDetails({ incident: selectedIncident, onBack }) {
-  const { id } = useParams();
-  const navigate = useNavigate();
-
-  const [incident, setIncident] = useState(selectedIncident || null);
-  const [loading, setLoading] = useState(!selectedIncident);
-  const [error, setError] = useState("");
-
-  const token = localStorage.getItem("token");
-
-  useEffect(() => {
-    if (selectedIncident) {
-      return;
-    }
-
-    const fetchIncident = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const response = await axios.get(
-          `${API_URL}/incidents/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        setIncident(response.data.data);
-      } catch (err) {
-        console.error(err);
-        setError(
-          err.response?.data?.message ||
-            "Unable to load incident details."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id && token) fetchIncident();
-  }, [id, token, selectedIncident]);
+  const incident = selectedIncident || null;
+  const loading = false;
+  const error = "";
 
   const handleBack = () => {
     if (typeof onBack === "function") {
@@ -54,11 +9,10 @@ function IncidentDetails({ incident: selectedIncident, onBack }) {
       return;
     }
 
-    navigate(-1);
   };
 
-  const accessError = !selectedIncident && (!id || !token)
-    ? "You must be logged in to view this incident."
+  const accessError = !selectedIncident
+    ? "No incident was selected."
     : "";
 
   const getStatusClass = (status) => {

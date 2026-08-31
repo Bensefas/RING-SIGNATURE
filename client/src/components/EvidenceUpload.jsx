@@ -7,6 +7,7 @@ const API = "http://localhost:5000";
 function EvidenceUpload({ incidentId, onUploaded }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [inputKey, setInputKey] = useState(0);
 
   const uploadFile = async () => {
     if (!file || !incidentId) return;
@@ -34,6 +35,7 @@ function EvidenceUpload({ incidentId, onUploaded }) {
       alert("Evidence uploaded successfully.");
 
       setFile(null);
+      setInputKey((key) => key + 1);
 
       if (onUploaded) {
         onUploaded(res.data.file);
@@ -55,6 +57,7 @@ function EvidenceUpload({ incidentId, onUploaded }) {
       </div>
 
       <input
+        key={inputKey}
         type="file"
         accept=".jpg,.jpeg,.png,.webp,.pdf"
         onChange={(e) => setFile(e.target.files[0])}

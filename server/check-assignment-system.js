@@ -27,16 +27,16 @@ async function run() {
 
         result = await pool.query(`
             SELECT
-                u.id,
+                u.user_id,
                 u.first_name,
                 u.last_name,
                 u.email,
                 u.role_id,
-                r.name AS role_name,
+                r.role_name,
                 u.is_active
             FROM users u
-            LEFT JOIN roles r ON r.id = u.role_id
-            ORDER BY u.id
+            LEFT JOIN roles r ON r.role_id = u.role_id
+            ORDER BY u.user_id
         `);
 
         console.table(result.rows);

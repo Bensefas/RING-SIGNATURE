@@ -30,23 +30,23 @@ const ASSIGNABLE_ROLES = [
     label: "Dean of Student Affairs"
   },
   {
-    value: "FACULTY_DEAN",
+    value: "DEAN",
     label: "Faculty Dean"
   },
   {
-    value: "DISCIPLINARY_COMMITTEE",
+    value: "DISCIPLINARY",
     label: "Disciplinary Committee"
   },
   {
-    value: "GUIDANCE_COUNSELLING",
+    value: "GUIDANCE",
     label: "Guidance & Counselling Unit"
   },
   {
-    value: "SECURITY_UNIT",
+    value: "SECURITY",
     label: "Security Unit"
   },
   {
-    value: "SCHOOL_CLINIC",
+    value: "CLINIC",
     label: "School Clinic"
   }
 ];
@@ -81,18 +81,18 @@ function normalizeIncident(item) {
     id: item.id,
     incident_id: item.incident_id || item.incidentId || item.id,
     title: item.title || "Untitled Incident",
-    category: item.category || "Uncategorized",
+    category: item.category_name || item.category || "Uncategorized",
     description: item.description || "",
     location: item.incident_location || item.location || "Not provided",
     incident_date: item.incident_date || item.incidentDate || "",
     priority: item.priority || "Medium",
     status: formatStatus(item.status || "SUBMITTED"),
     reporter_id: item.reporter_id || item.reporterId,
-    first_name: item.first_name || "",
-    last_name: item.last_name || "",
-    email: item.email || "",
-    assigned_to: item.assigned_to || item.assignedTo || "",
-    assigned_role: item.assigned_role || item.assignedRole || "",
+    first_name: item.first_name || item.reporter_first_name || "",
+    last_name: item.last_name || item.reporter_last_name || "",
+    email: item.email || item.reporter_email || "",
+    assigned_to: item.assigned_to_name || item.assignedTo || item.assigned_to || "",
+    assigned_role: item.assigned_role || item.assigned_role_name || item.assignedRole || "",
     feedback: item.feedback || "",
     created_at: item.created_at || item.createdAt,
     updated_at: item.updated_at || item.updatedAt,
@@ -103,9 +103,23 @@ function normalizeIncident(item) {
 }
 
 function formatStatus(status) {
-  return String(status || "SUBMITTED")
+  const value = String(status || "SUBMITTED").trim().toLowerCase().replace(/_/g, " ");
+  const aliases = {
+    submitted: "Submitted",
+    pending: "Pending",
+    assigned: "Assigned",
+    "under review": "Under Review",
+    "under investigation": "Investigating",
+    investigating: "Investigating",
+    "action taken": "Action Taken",
+    resolved: "Resolved",
+    closed: "Closed",
+    rejected: "Rejected",
+  };
+
+  return aliases[value] || value
     .toLowerCase()
-    .split("_")
+    .split(" ")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
@@ -162,7 +176,7 @@ function formatDate(value) {
   });
 }
 
-export default function DVCDashboard({ user, onLogout }) {
+export default function DVCDashboard({ user, onLogout, onNavigate }) {
   const [incidents, setIncidents] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState(null);
 
@@ -303,7 +317,7 @@ export default function DVCDashboard({ user, onLogout }) {
 
       const matchesStatus =
         statusFilter === "All" ||
-        incident.status === statusFilter;
+        formatStatus(incident.status) === formatStatus(statusFilter);
 
       const matchesPriority =
         priorityFilter === "All" ||
@@ -348,13 +362,16 @@ export default function DVCDashboard({ user, onLogout }) {
     });
   };
 
+  const dismissIncidentModal = () => {
+    setSelectedIncident(null);
+    setAssignment({
+      assignedTo: "",
+      assignedRole: ""
+    });
+  };
+
   const assignIncident = async () => {
     if (!selectedIncident) return;
-
-    if (!assignment.assignedTo.trim()) {
-      setError("Enter the officer or unit to receive this case.");
-      return;
-    }
 
     if (!assignment.assignedRole) {
       setError("Select an administrative role.");
@@ -371,7 +388,7 @@ export default function DVCDashboard({ user, onLogout }) {
       await axios.post(
         `${API_URL}/incidents/${selectedIncident.incident_id || selectedIncident.id}/assign`,
         {
-          assigned_to_user_id: Number(assignment.assignedTo.trim()),
+          assigned_role: assignment.assignedRole,
           assignment_note: `Assigned to ${assignment.assignedRole}`
         },
         {
@@ -383,18 +400,11 @@ export default function DVCDashboard({ user, onLogout }) {
         }
       );
 
+      dismissIncidentModal();
       setSuccess("Incident assigned successfully.");
+      window.setTimeout(() => setSuccess(""), 4000);
 
       await fetchIncidents(true);
-
-      const refreshed = incidents.find(
-        (item) =>
-          item.incident_id === selectedIncident.incident_id
-      );
-
-      if (refreshed) {
-        setSelectedIncident(refreshed);
-      }
     } catch (err) {
       console.error("Assignment failed:", err);
 
@@ -469,7 +479,7 @@ export default function DVCDashboard({ user, onLogout }) {
   };
 
   return (
-    <Layout user={user} onLogout={onLogout}>
+    <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
       <div className="dvc-dashboard">
       <style>{`
         * {
@@ -1823,24 +1833,6 @@ export default function DVCDashboard({ user, onLogout }) {
                 <div className="form-grid">
                   <div className="form-group">
                     <label>
-                      Officer / Unit
-                    </label>
-
-                    <input
-                      type="number"
-                      placeholder="Enter user ID"
-                      value={assignment.assignedTo}
-                      onChange={(event) =>
-                        setAssignment({
-                          ...assignment,
-                          assignedTo: event.target.value
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>
                       Administrative Role
                     </label>
 
@@ -1854,7 +1846,7 @@ export default function DVCDashboard({ user, onLogout }) {
                       }
                     >
                       <option value="">
-                        Select receiving unit
+                        Select administrative role
                       </option>
 
                       {ASSIGNABLE_ROLES.map((role) => (

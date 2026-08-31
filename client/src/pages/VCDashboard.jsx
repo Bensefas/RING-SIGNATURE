@@ -17,7 +17,7 @@ import {
 
 const API = "http://localhost:5000";
 
-function VCDashboard({ user, onLogout }) {
+function VCDashboard({ user, onLogout, onNavigate }) {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -74,7 +74,7 @@ function VCDashboard({ user, onLogout }) {
     total === 0 ? 0 : Math.round((resolved / total) * 100);
 
   return (
-    <Layout user={user} onLogout={onLogout}>
+    <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
       <div style={styles.hero}>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   Activity,
@@ -18,7 +18,6 @@ import {
   TrendingUp,
   Users,
   X,
-  XCircle,
 } from "lucide-react";
 
 const API_BASE_URL =
@@ -217,7 +216,7 @@ export default function VCDashboard() {
     });
   }, []);
 
-  const loadIncidents = async (showRefresh = false) => {
+  const loadIncidents = useCallback(async (showRefresh = false) => {
     try {
       setError("");
 
@@ -260,11 +259,11 @@ export default function VCDashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [api]);
 
   useEffect(() => {
-    loadIncidents();
-  }, []);
+    queueMicrotask(() => { void loadIncidents(); });
+  }, [loadIncidents]);
 
   const statistics = useMemo(() => {
     const total = incidents.length;

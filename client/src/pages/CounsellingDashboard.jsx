@@ -1,4 +1,4 @@
-import { useEffect,useState } from "react";
+import { useCallback, useEffect,useState } from "react";
 import axios from "axios";
 import Layout from "../components/Layout";
 import DashboardCard from "../components/DashboardCard";
@@ -7,20 +7,22 @@ import { Heart,Eye } from "lucide-react";
 
 const API="http://localhost:5000";
 
-function CounsellingDashboard({user,onLogout}){
+function CounsellingDashboard({user,onLogout,onNavigate}){
 
  const [cases,setCases]=useState([]);
  const [selected,setSelected]=useState(null);
 
- useEffect(()=>{loadCases();},[]);
+ const statusIs=(item,value)=>String(item.status_name||item.status||"").toLowerCase()===value;
 
- const loadCases=async()=>{
+ const loadCases=useCallback(async()=>{
   const token=localStorage.getItem("token");
   const res=await axios.get(`${API}/api/assignments/my`,{
    headers:{Authorization:`Bearer ${token}`}
   });
   setCases(res.data.data||[]);
- };
+ },[]);
+
+ useEffect(()=>{queueMicrotask(()=>{ void loadCases(); });},[loadCases]);
 
  const updateStatus=async(statusId)=>{
   const token=localStorage.getItem("token");
@@ -35,7 +37,7 @@ function CounsellingDashboard({user,onLogout}){
  };
 
  return(
-  <Layout user={user} onLogout={onLogout}>
+    <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
    <div style={styles.hero}>
     <div>
      <h1>Counselling Portal</h1>
@@ -46,8 +48,8 @@ function CounsellingDashboard({user,onLogout}){
 
    <div style={styles.grid}>
     <DashboardCard title="Counselling Cases" value={cases.length} color="#8B5CF6"/>
-    <DashboardCard title="Ongoing" value={cases.filter(c=>c.status_name==="Under Investigation").length} color="#F59E0B"/>
-    <DashboardCard title="Completed" value={cases.filter(c=>c.status_name==="Resolved").length} color="#10B981"/>
+    <DashboardCard title="Ongoing" value={cases.filter(c=>["assigned","under review","under investigation","investigating","action taken"].some((value)=>statusIs(c,value))).length} color="#F59E0B"/>
+    <DashboardCard title="Completed" value={cases.filter(c=>statusIs(c,"resolved")||statusIs(c,"closed")).length} color="#10B981"/>
    </div>
 
    <table style={styles.table}>

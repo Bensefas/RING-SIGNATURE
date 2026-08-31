@@ -61,22 +61,25 @@ function DSADashboard({ user, onLogout, onNavigate }) {
 
   const total = incidents.length;
 
+  const statusIs = (incident, value) =>
+    String(incident.status_name || incident.status || "").toLowerCase() === value;
+
   const pending = incidents.filter(
     (incident) =>
-      incident.status_name === "Submitted" ||
-      incident.status_name === "Pending"
+      statusIs(incident, "submitted") ||
+      statusIs(incident, "pending")
   ).length;
 
   const assigned = incidents.filter(
-    (incident) => incident.status_name === "Assigned"
+    (incident) => statusIs(incident, "assigned")
   ).length;
 
   const investigation = incidents.filter(
-    (incident) => incident.status_name === "Under Investigation"
+    (incident) => statusIs(incident, "under investigation") || statusIs(incident, "investigating") || statusIs(incident, "under review") || statusIs(incident, "action taken")
   ).length;
 
   const resolved = incidents.filter(
-    (incident) => incident.status_name === "Resolved"
+    (incident) => statusIs(incident, "resolved") || statusIs(incident, "closed")
   ).length;
 
   const highPriority = incidents.filter(
@@ -149,7 +152,7 @@ function DSADashboard({ user, onLogout, onNavigate }) {
   };
 
   return (
-    <Layout user={user} onLogout={onLogout}>
+    <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
       <div style={styles.hero}>
         <div style={{ flex: 1 }}>
           <div style={styles.roleLabel}>

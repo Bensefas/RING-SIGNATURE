@@ -62,7 +62,7 @@ const findUserByEmail = async (email) => {
       u.phone,
       u.password_hash,
       u.role_id,
-      r.name AS role_name,
+      r.role_name,
       u.unit_id,
       o.unit_name,
       u.is_active,
@@ -70,10 +70,9 @@ const findUserByEmail = async (email) => {
       u.created_at,
       u.updated_at
     FROM users u
-    LEFT JOIN roles r
-      ON u.role_id = r.id
     LEFT JOIN organizational_units o
       ON u.unit_id = o.unit_id
+    LEFT JOIN roles r ON u.role_id = r.role_id
     WHERE u.email = $1`,
     [email]
   );
@@ -84,23 +83,22 @@ const findUserByEmail = async (email) => {
 const findUserById = async (userId) => {
   const result = await pool.query(
     `SELECT
-      u.id,
-      u.matric_staff_id,
+      u.user_id,
+      u.staff_student_id,
       u.first_name,
       u.last_name,
       u.email,
       u.phone,
       u.role_id,
-      r.name AS role_name,
+      r.role_name,
       u.department,
       u.faculty,
       u.is_active,
       u.created_at,
       u.updated_at
     FROM users u
-    LEFT JOIN roles r
-      ON u.role_id = r.id
-    WHERE u.id = $1`,
+    LEFT JOIN roles r ON u.role_id = r.role_id
+    WHERE u.user_id = $1`,
     [userId]
   );
 

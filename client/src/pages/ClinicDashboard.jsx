@@ -1,4 +1,4 @@
-import { useEffect,useState } from "react";
+import { useCallback, useEffect,useState } from "react";
 import axios from "axios";
 import Layout from "../components/Layout";
 import DashboardCard from "../components/DashboardCard";
@@ -7,20 +7,22 @@ import { Stethoscope,Eye } from "lucide-react";
 
 const API="http://localhost:5000";
 
-function ClinicDashboard({user,onLogout}){
+function ClinicDashboard({user,onLogout,onNavigate}){
 
  const [cases,setCases]=useState([]);
  const [selected,setSelected]=useState(null);
 
- useEffect(()=>{loadCases();},[]);
+ const statusIs=(item,value)=>String(item.status_name||item.status||"").toLowerCase()===value;
 
- const loadCases=async()=>{
+ const loadCases=useCallback(async()=>{
   const token=localStorage.getItem("token");
   const res=await axios.get(`${API}/api/assignments/my`,{
    headers:{Authorization:`Bearer ${token}`}
   });
   setCases(res.data.data||[]);
- };
+ },[]);
+
+ useEffect(()=>{queueMicrotask(()=>{ void loadCases(); });},[loadCases]);
 
  const updateStatus=async(statusId)=>{
   const token=localStorage.getItem("token");
@@ -35,7 +37,7 @@ function ClinicDashboard({user,onLogout}){
  };
 
  return(
-  <Layout user={user} onLogout={onLogout}>
+    <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
    <div style={styles.hero}>
     <div>
      <h1>Clinic Portal</h1>
@@ -46,8 +48,8 @@ function ClinicDashboard({user,onLogout}){
 
    <div style={styles.grid}>
     <DashboardCard title="Health Cases" value={cases.length} color="#0EA5E9"/>
-    <DashboardCard title="In Treatment" value={cases.filter(c=>c.status_name==="Under Investigation").length} color="#F59E0B"/>
-    <DashboardCard title="Completed" value={cases.filter(c=>c.status_name==="Resolved").length} color="#10B981"/>
+    <DashboardCard title="In Treatment" value={cases.filter(c=>["assigned","under review","under investigation","investigating","action taken"].some((value)=>statusIs(c,value))).length} color="#F59E0B"/>
+    <DashboardCard title="Completed" value={cases.filter(c=>statusIs(c,"resolved")||statusIs(c,"closed")).length} color="#10B981"/>
    </div>
 
    <table style={styles.table}>

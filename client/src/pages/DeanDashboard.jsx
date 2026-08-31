@@ -6,7 +6,7 @@ import { Search, RefreshCw } from "lucide-react";
 
 const API = "http://localhost:5000";
 
-function DeanDashboard({ user, onLogout }) {
+function DeanDashboard({ user, onLogout, onNavigate }) {
   const [incidents, setIncidents] = useState([]);
   const [search, setSearch] = useState("");
 
@@ -36,7 +36,7 @@ function DeanDashboard({ user, onLogout }) {
   }, [incidents, search]);
 
   return (
-    <Layout user={user} onLogout={onLogout}>
+    <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
       <div style={styles.hero}>
         <div>
           <h1>Faculty Dean Dashboard</h1>
@@ -52,7 +52,7 @@ function DeanDashboard({ user, onLogout }) {
       <div style={styles.grid}>
         <DashboardCard title="Faculty Cases" value={incidents.length} color="#2563EB"/>
         <DashboardCard title="Open Cases" value={incidents.filter(i => i.status_name !== "Resolved").length} color="#F59E0B"/>
-        <DashboardCard title="Resolved" value={incidents.filter(i => i.status_name === "Resolved").length} color="#10B981"/>
+        <DashboardCard title="Resolved" value={incidents.filter(i => ["resolved", "closed"].includes(String(i.status_name || i.status || "").toLowerCase())).length} color="#10B981"/>
       </div>
 
       <div style={styles.card}>

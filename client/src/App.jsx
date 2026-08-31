@@ -20,6 +20,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ReportIncident from "./pages/ReportIncident";
 import MyIncidents from "./pages/MyIncidents";
 import IncidentDetails from "./pages/IncidentDetails";
+import MyAssignments from "./pages/MyAssignments";
 
 const API_URL = "http://localhost:5000";
 
@@ -27,12 +28,14 @@ function App() {
   const [page, setPage] = useState("login");
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [message, setMessage] = useState("");
+  const [dashboardMessage, setDashboardMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
 
   const [studentPage, setStudentPage] = useState("dashboard");
   const [selectedIncident, setSelectedIncident] = useState(null);
+  const [showMyAssignments, setShowMyAssignments] = useState(false);
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -179,6 +182,7 @@ function App() {
     setPage("login");
     setStudentPage("dashboard");
     setSelectedIncident(null);
+    setShowMyAssignments(false);
     setMessage("");
   };
 
@@ -208,16 +212,26 @@ function App() {
     ? Number(loggedInUser.role_id)
     : null;
 
-  const handleDashboardNavigate = () => {
-    document.querySelector(".incident-list")?.scrollIntoView({ behavior: "smooth" });
-  };
-
   /*
    * ============================================================
    * DASHBOARD ROUTING
    * ============================================================
    */
   if (page === "dashboard" && loggedInUser) {
+
+    if (showMyAssignments) {
+      return (
+        <MyAssignments
+          user={loggedInUser}
+          onLogout={handleLogout}
+          onBack={() => setShowMyAssignments(false)}
+        />
+      );
+    }
+
+    const handleAssignedCasesNavigate = () => {
+      setShowMyAssignments(true);
+    };
 
     /*
      * ----------------------------------------------------------
@@ -231,6 +245,10 @@ function App() {
             user={loggedInUser}
             onLogout={handleLogout}
             onNavigate={(nextPage) => setStudentPage(nextPage)}
+            onSubmitted={(text) => {
+              setDashboardMessage(text);
+              setStudentPage("dashboard");
+            }}
           />
         );
       }
@@ -271,6 +289,8 @@ function App() {
             }
             setStudentPage(nextPage);
           }}
+          dashboardMessage={dashboardMessage}
+          onMessageShown={() => setDashboardMessage("")}
         />
       );
     }
@@ -299,7 +319,7 @@ function App() {
         <DVCDashboard
           user={loggedInUser}
           onLogout={handleLogout}
-          onNavigate={handleDashboardNavigate}
+          onNavigate={handleAssignedCasesNavigate}
         />
       );
     }
@@ -314,6 +334,7 @@ function App() {
         <VCDashboard
           user={loggedInUser}
           onLogout={handleLogout}
+          onNavigate={handleAssignedCasesNavigate}
         />
       );
     }
@@ -328,6 +349,7 @@ function App() {
         <HODDashboard
           user={loggedInUser}
           onLogout={handleLogout}
+          onNavigate={handleAssignedCasesNavigate}
         />
       );
     }
@@ -342,6 +364,7 @@ function App() {
         <DeanDashboard
           user={loggedInUser}
           onLogout={handleLogout}
+          onNavigate={handleAssignedCasesNavigate}
         />
       );
     }
@@ -359,7 +382,7 @@ function App() {
         <DSADashboard
           user={loggedInUser}
           onLogout={handleLogout}
-          onNavigate={handleDashboardNavigate}
+          onNavigate={handleAssignedCasesNavigate}
         />
       );
     }
@@ -374,7 +397,7 @@ function App() {
         <SecurityDashboard
           user={loggedInUser}
           onLogout={handleLogout}
-          onNavigate={handleDashboardNavigate}
+          onNavigate={handleAssignedCasesNavigate}
         />
       );
     }
@@ -389,7 +412,7 @@ function App() {
         <DisciplinaryDashboard
           user={loggedInUser}
           onLogout={handleLogout}
-          onNavigate={handleDashboardNavigate}
+          onNavigate={handleAssignedCasesNavigate}
         />
       );
     }
@@ -404,6 +427,7 @@ function App() {
         <CounsellingDashboard
           user={loggedInUser}
           onLogout={handleLogout}
+          onNavigate={handleAssignedCasesNavigate}
         />
       );
     }
@@ -418,6 +442,7 @@ function App() {
         <ClinicDashboard
           user={loggedInUser}
           onLogout={handleLogout}
+          onNavigate={handleAssignedCasesNavigate}
         />
       );
     }

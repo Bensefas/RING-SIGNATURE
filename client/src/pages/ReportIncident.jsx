@@ -4,7 +4,7 @@ import Layout from "../components/Layout";
 
 const API_URL = "http://localhost:5000/api";
 
-function ReportIncident({ user, onLogout, onBack, onNavigate }) {
+function ReportIncident({ user, onLogout, onBack, onNavigate, onSubmitted }) {
   const [form, setForm] = useState({
     title: "",
     category_id: "",
@@ -197,6 +197,9 @@ function ReportIncident({ user, onLogout, onBack, onNavigate }) {
         priority: "Medium",
         anonymity: false,
       });
+      if (typeof onSubmitted === "function") {
+        onSubmitted(response.data?.message || "Incident submitted successfully.");
+      }
     } catch (err) {
       console.error("Incident submission error:", err);
 

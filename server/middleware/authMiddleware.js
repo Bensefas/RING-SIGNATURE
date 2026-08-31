@@ -72,9 +72,9 @@ const authMiddleware = async (req, res, next) => {
     */
 
     req.user = {
-      id: user.id,
-      userId: user.id,
-      user_id: user.id,
+      id: user.user_id,
+      userId: user.user_id,
+      user_id: user.user_id,
 
       roleId: Number(user.role_id),
       role_id: Number(user.role_id),

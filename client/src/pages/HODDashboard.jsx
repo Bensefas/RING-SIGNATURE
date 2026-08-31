@@ -11,7 +11,7 @@ import {
 
 const API_URL = "http://localhost:5000/api";
 
-export default function HODDashboard({ user, onLogout }) {
+export default function HODDashboard({ user, onLogout, onNavigate }) {
   const [incidents, setIncidents] = useState([]);
 
   const fetchIncidents = async () => {
@@ -40,13 +40,23 @@ export default function HODDashboard({ user, onLogout }) {
     return () => clearTimeout(timer);
   }, []);
 
-  const statusCount = (text) =>
-    incidents.filter((i) =>
-      String(i.status || "").toLowerCase().includes(text)
-    ).length;
+  const statusIs = (incident, values) =>
+    values.includes(String(incident.status_name || incident.status || "").toLowerCase());
+
+  const pendingCount = incidents.filter((incident) =>
+    statusIs(incident, ["submitted", "pending"])
+  ).length;
+
+  const investigationCount = incidents.filter((incident) =>
+    statusIs(incident, ["assigned", "under review", "under investigation", "investigating", "action taken"])
+  ).length;
+
+  const resolvedCount = incidents.filter((incident) =>
+    statusIs(incident, ["resolved", "closed"])
+  ).length;
 
   return (
-    <Layout user={user} onLogout={onLogout}>
+    <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
       <div className="dashboard-shell">
         <section className="hod-hero">
           <div>
@@ -79,7 +89,7 @@ export default function HODDashboard({ user, onLogout }) {
             <div className="hod-stat-icon"><Clock size={20} /></div>
             <p>Pending</p>
             <h2>
-              {statusCount("pending")}
+              {pendingCount}
             </h2>
           </div>
 
@@ -87,7 +97,7 @@ export default function HODDashboard({ user, onLogout }) {
             <div className="hod-stat-icon"><AlertTriangle size={20} /></div>
             <p>Investigation</p>
             <h2>
-              {statusCount("investig")}
+              {investigationCount}
             </h2>
           </div>
 
@@ -95,7 +105,7 @@ export default function HODDashboard({ user, onLogout }) {
             <div className="hod-stat-icon"><CheckCircle size={20} /></div>
             <p>Resolved</p>
             <h2>
-              {statusCount("resolved")}
+              {resolvedCount}
             </h2>
           </div>
         </section>

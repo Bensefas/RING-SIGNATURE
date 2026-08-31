@@ -55,16 +55,19 @@ function FacultyDeanDashboard({ user, onLogout, onNavigate }) {
 
   const total = incidents.length;
 
+  const statusIs = (incident, values) =>
+    values.includes(String(incident.status_name || incident.status || "").toLowerCase());
+
   const assigned = incidents.filter(
-    (i) => i.status_name === "Assigned"
+    (i) => statusIs(i, ["assigned"])
   ).length;
 
   const investigating = incidents.filter(
-    (i) => i.status_name === "Under Investigation"
+    (i) => statusIs(i, ["under review", "under investigation", "investigating", "action taken"])
   ).length;
 
   const resolved = incidents.filter(
-    (i) => i.status_name === "Resolved"
+    (i) => statusIs(i, ["resolved", "closed"])
   ).length;
 
   const highPriority = incidents.filter(

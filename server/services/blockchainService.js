@@ -81,4 +81,16 @@ async function anchorStatusChange(incidentId, previousStatus, newStatus, actorId
   return { txId, mock: false, previousStatus, actorId };
 }
 
-module.exports = { anchorIncidentCreation, anchorStatusChange };
+async function verifyRecord(incidentId) {
+  const { client, gateway, contract } = getContract();
+  try {
+    const payload = await contract.evaluateTransaction("ReadIncident", incidentId);
+    const record = JSON.parse(Buffer.from(payload).toString("utf8"));
+    return { verified: record.incidentID === incidentId, record, mock: false };
+  } finally {
+    gateway.close();
+    client.close();
+  }
+}
+
+module.exports = { anchorIncidentCreation, anchorStatusChange, verifyRecord };

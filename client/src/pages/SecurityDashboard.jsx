@@ -56,16 +56,19 @@ function SecurityDashboard({ user, onLogout, onNavigate }) {
 
   const total = incidents.length;
 
+  const statusIs = (incident, value) =>
+    String(incident.status_name || incident.status || "").toLowerCase() === value;
+
   const investigating = incidents.filter(
-    (i) => i.status_name === "Under Investigation"
+    (i) => statusIs(i, "under investigation") || statusIs(i, "investigating")
   ).length;
 
   const resolved = incidents.filter(
-    (i) => i.status_name === "Resolved"
+    (i) => statusIs(i, "resolved") || statusIs(i, "closed")
   ).length;
 
   const assigned = incidents.filter(
-    (i) => i.status_name === "Assigned"
+    (i) => statusIs(i, "assigned")
   ).length;
 
   const critical = incidents.filter(
@@ -101,7 +104,7 @@ function SecurityDashboard({ user, onLogout, onNavigate }) {
   };
 
   return (
-    <Layout user={user} onLogout={onLogout}>
+    <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
       <div style={styles.hero}>
         <div>
           <div style={styles.roleLabel}>

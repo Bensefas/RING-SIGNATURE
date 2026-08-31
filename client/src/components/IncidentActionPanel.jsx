@@ -62,7 +62,7 @@ function IncidentActionPanel({ role, userId, incident, onChanged }) {
     return (
       <div className="incident-actions">
         <select value={status} onChange={(event) => setStatus(event.target.value)}>
-          {['UNDER_REVIEW', 'INVESTIGATING', 'ACTION_TAKEN', 'RESOLVED'].map((value) => <option key={value}>{value}</option>)}
+          {['UNDER_REVIEW', 'INVESTIGATING', 'ACTION_TAKEN', 'RESOLVED', 'CLOSED', 'REJECTED'].map((value) => <option key={value}>{value}</option>)}
         </select>
         <input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Status comment" />
         <button className="action-primary" type="button" onClick={() => request("patch", "/status", { new_status: status, comment })}>Update status</button>

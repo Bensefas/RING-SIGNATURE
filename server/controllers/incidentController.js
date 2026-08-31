@@ -117,8 +117,6 @@ const getMyIncident = async (req, res) => {
     res.json({
       success: true,
       incident,
-      data: incidents,
-      data: incident,
     });
   } catch (error) {
     console.error(error);
@@ -149,7 +147,7 @@ const getCategories = async (req, res) => {
 
 const getInternalIncident = async (incidentId) => {
   const result = await pool.query(
-    "SELECT * FROM incidents WHERE incident_id = $1",
+    `SELECT i.* FROM incidents i WHERE i.incident_id = $1`,
     [incidentId]
   );
   return result.rows[0];
@@ -160,14 +158,19 @@ const assignIncident = async (req, res) => {
     if (Number(req.user.role_id) !== 3) {
       return res.status(403).json({ success: false, message: "Only the DVC can assign incidents." });
     }
-    const { assigned_to_user_id, assignment_note } = req.body;
+    const { assigned_role, assignment_note } = req.body;
     const incident = await getInternalIncident(req.params.incidentId);
-    if (!incident || !assigned_to_user_id) {
+    if (!incident || !assigned_role) {
       return res.status(400).json({ success: false, message: "Incident and assignee are required." });
     }
     const assignee = await pool.query(
-      "SELECT id, role_id, is_active FROM users WHERE id = $1",
-      [assigned_to_user_id]
+      `SELECT u.user_id, u.role_id, u.is_active, r.role_name
+       FROM users u
+       JOIN roles r ON r.role_id = u.role_id
+       WHERE UPPER(r.role_name) = UPPER($1) AND u.is_active = TRUE
+       ORDER BY u.user_id
+       LIMIT 1`,
+      [assigned_role]
     );
     if (!assignee.rows[0] || !assignee.rows[0].is_active) {
       return res.status(404).json({ success: false, message: "Active assignee not found." });
@@ -181,7 +184,7 @@ const assignIncident = async (req, res) => {
       const assignment = await client.query(
         `INSERT INTO incident_assignments (incident_id, assigned_by, assigned_to, assignment_note)
          VALUES ($1, $2, $3, $4) RETURNING *`,
-        [incident.id, req.user.id, assigned_to_user_id, assignment_note || null]
+        [incident.id, req.user.id, assignee.rows[0].user_id, assignment_note || null]
       );
       await client.query("UPDATE incidents SET status = 'ASSIGNED', updated_at = NOW() WHERE id = $1", [incident.id]);
       await client.query(
@@ -192,7 +195,7 @@ const assignIncident = async (req, res) => {
       await client.query(
         `INSERT INTO notifications (user_id, title, message)
          VALUES ($1, 'Incident assigned', $2)`,
-        [assigned_to_user_id, `Incident ${incident.incident_id} has been assigned to you.`]
+        [assignee.rows[0].user_id, `Incident ${incident.incident_id} has been assigned to you.`]
       );
       await client.query("COMMIT");
       return res.json({ success: true, data: assignment.rows[0] });
@@ -217,9 +220,9 @@ const updateIncidentStatus = async (req, res) => {
     const { new_status, comment } = req.body;
     const incident = await getInternalIncident(req.params.incidentId);
     const assignment = incident && await pool.query(
-      `SELECT id FROM incident_assignments
-       WHERE incident_id = $1 AND assigned_to = $2 AND completed_at IS NULL
-       ORDER BY assigned_at DESC LIMIT 1`,
+        `SELECT id FROM incident_assignments
+         WHERE incident_id = $1 AND assigned_to = $2 AND completed_at IS NULL
+         ORDER BY assigned_at DESC LIMIT 1`,
       [incident.id, req.user.id]
     );
     if (!incident || !assignment?.rows[0]) {
@@ -229,7 +232,7 @@ const updateIncidentStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: "new_status is required." });
     }
     const anchor = await blockchainService.anchorStatusChange(
-      incident.incident_id, incident.status, new_status, req.user.id
+      incident.id, incident.status, new_status, req.user.id
     ).catch((error) => {
       console.error("Status anchor failed:", error);
       return null;
@@ -297,7 +300,7 @@ const completeIncident = async (req, res) => {
     const result = incident && await pool.query(
       `UPDATE incident_assignments SET completed_at = NOW()
        WHERE incident_id = $1 AND assigned_to = $2 AND completed_at IS NULL
-       RETURNING id`,
+      RETURNING id`,
       [incident.id, req.user.id]
     );
     if (!incident || !result?.rows[0]) return res.status(403).json({ success: false, message: "You are not the active assignee." });
@@ -346,8 +349,8 @@ const closeIncident = async (req, res) => {
     );
     await pool.query(
       `INSERT INTO incident_status_history
-        (incident_id, previous_status, new_status, changed_by, comment, blockchain_tx_id)
-       VALUES ($1, $2, 'CLOSED', $3, 'Closed by VC', $4)`,
+        (incident_id, status_id, previous_status, new_status, changed_by, comment, blockchain_tx_id)
+       VALUES ($1, (SELECT status_id FROM incident_statuses WHERE status_name = 'CLOSED'), $2, 'CLOSED', $3, 'Closed by VC', $4)`,
       [incident.id, incident.status, req.user.id, anchor?.txId || null]
     );
     return res.json({ success: true, status: "CLOSED", blockchain_tx_id: anchor?.txId || null });
@@ -380,10 +383,10 @@ const getAssignableUsers = async (req, res) => {
       return res.status(403).json({ success: false, message: "Only the DVC can view assignable users." });
     }
     const result = await pool.query(
-      `SELECT u.id AS user_id, u.first_name, u.last_name, u.email,
-              u.role_id, r.name AS role_name
+            `SELECT u.user_id, u.first_name, u.last_name, u.email,
+              u.role_id, r.role_name
        FROM users u
-       JOIN roles r ON r.id = u.role_id
+             JOIN roles r ON r.role_id = u.role_id
        WHERE u.role_id BETWEEN 5 AND 11 AND u.is_active = TRUE
        ORDER BY u.role_id, u.first_name, u.last_name`
     );

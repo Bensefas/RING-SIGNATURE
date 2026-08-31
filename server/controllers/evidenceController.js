@@ -6,7 +6,7 @@ const ipfsGateway = process.env.IPFS_GATEWAY_URL || "http://127.0.0.1:8080/ipfs"
 
 const getIncident = async (incidentId) => {
   const result = await pool.query(
-    "SELECT id, incident_id FROM incidents WHERE incident_id = $1 OR CAST(id AS TEXT) = $1 LIMIT 1",
+    "SELECT id, incident_id FROM incidents WHERE incident_id = $1 LIMIT 1",
     [incidentId]
   );
   return result.rows[0];
@@ -24,9 +24,9 @@ const uploadEvidence = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO incident_evidence
         (incident_id, uploaded_by, original_name, mime_type, file_size, ipfs_cid, file_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [incident.id, req.user.id, req.file.originalname, req.file.mimetype,
-        req.file.size, ipfs.cid, fileHash]
+      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [incident.id, req.user.user_id, req.file.originalname,
+        req.file.mimetype, req.file.size, ipfs.cid, fileHash]
     );
     await fs.unlink(req.file.path).catch(() => {});
     const file = {
@@ -46,10 +46,10 @@ const getIncidentFiles = async (req, res) => {
     const incident = await getIncident(req.params.incidentId);
     if (!incident) return res.status(404).json({ success: false, message: "Incident not found." });
     const result = await pool.query(
-      `SELECT id AS file_id, original_name AS file_name, mime_type AS file_type,
+             `SELECT id AS file_id, original_name AS file_name, mime_type AS file_type,
               file_size, ipfs_cid, file_hash, created_at
-       FROM incident_evidence WHERE incident_id = $1 ORDER BY created_at DESC`,
-      [incident.id]
+             FROM incident_evidence WHERE incident_id = $1 ORDER BY created_at DESC`,
+             [incident.id]
     );
     return res.json({
       success: true,

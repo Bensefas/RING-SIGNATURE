@@ -21,8 +21,8 @@ const addAdvisoryNote = async (req, res) => {
     }
 
     await pool.query(
-      `INSERT INTO incident_advisory_notes
-      (incident_id,user_id,note)
+      `INSERT INTO incident_advisories
+      (incident_id,user_id,advisory)
       VALUES($1,$2,$3)`,
       [incident_id,userId,note]
     );
@@ -53,12 +53,12 @@ const getIncidentNotes = async(req,res)=>{
     const result = await pool.query(
       `
       SELECT
-        n.note,
+        n.advisory,
         n.created_at,
         u.first_name,
         u.last_name,
         r.role_name
-      FROM incident_advisory_notes n
+      FROM incident_advisories n
       JOIN users u ON n.user_id=u.user_id
       JOIN roles r ON u.role_id=r.role_id
       WHERE incident_id=$1

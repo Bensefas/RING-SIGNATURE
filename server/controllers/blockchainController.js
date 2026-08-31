@@ -28,10 +28,7 @@ const verifyIncident = async (req, res) => {
 
         const incident = result.rows[0];
 
-        const verification = await verifyRecord(
-            incident.blockchain_hash,
-            incident.blockchain_tx_id
-        );
+        const verification = await verifyRecord(incident.incident_id);
 
         return res.json({
             success: true,

@@ -88,16 +88,21 @@ function formatDate(value) {
 }
 
 function normalizeStatus(status) {
-  if (!status) return "Pending";
+  if (!status) return "Submitted";
 
-  const value = String(status).toLowerCase();
+  const value = String(status).toLowerCase().replace(/_/g, " ");
 
-  if (value.includes("investig")) return "Under Investigation";
+  if (value.includes("under review")) return "Under Review";
+  if (value.includes("action taken")) return "Action Taken";
+  if (value.includes("investig")) return "Investigating";
+  if (value.includes("assign")) return "Assigned";
+  if (value.includes("submit")) return "Submitted";
+  if (value.includes("pending")) return "Pending";
   if (value.includes("resolv")) return "Resolved";
   if (value.includes("clos")) return "Closed";
   if (value.includes("reject")) return "Rejected";
 
-  return "Pending";
+  return "Submitted";
 }
 
 function normalizeIncident(item) {
@@ -243,18 +248,18 @@ export default function SERVICOMDashboard() {
   };
 
   useEffect(() => {
-    fetchIncidents();
+    queueMicrotask(() => { void fetchIncidents(); });
   }, []);
 
   const statistics = useMemo(() => {
     const total = incidents.length;
 
     const pending = incidents.filter(
-      (incident) => incident.status === "Pending"
+      (incident) => ["Submitted", "Pending"].includes(incident.status)
     ).length;
 
     const investigating = incidents.filter(
-      (incident) => incident.status === "Under Investigation"
+      (incident) => ["Assigned", "Under Review", "Investigating", "Action Taken"].includes(incident.status)
     ).length;
 
     const resolved = incidents.filter(

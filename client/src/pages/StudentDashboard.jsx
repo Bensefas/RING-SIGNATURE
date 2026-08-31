@@ -22,7 +22,7 @@ import {
 
 const API = "http://localhost:5000";
 
-function StudentDashboard({ user, onLogout, onNavigate }) {
+function StudentDashboard({ user, onLogout, onNavigate, dashboardMessage, onMessageShown }) {
   const [incidents, setIncidents] = useState([]);
   const [showAllIncidents, setShowAllIncidents] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -139,13 +139,19 @@ function StudentDashboard({ user, onLogout, onNavigate }) {
 
   const handleViewIncident = (incident) => {
     if (onNavigate) {
-      onNavigate("my-incidents", incident);
+      onNavigate("details", incident);
     }
   };
 
   return (
     <Layout user={user} onLogout={onLogout} onNavigate={onNavigate}>
       <div style={styles.container}>
+        {dashboardMessage && (
+          <div role="status" style={styles.successMessage}>
+            {dashboardMessage}
+            <button type="button" onClick={onMessageShown}>Dismiss</button>
+          </div>
+        )}
         {/* HERO SECTION */}
         <section style={styles.hero}>
           <div style={styles.heroContent}>
@@ -655,6 +661,20 @@ const styles = {
     width: "100%",
     maxWidth: 1500,
     margin: "0 auto",
+  },
+
+  successMessage: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    marginBottom: 20,
+    padding: "12px 16px",
+    border: "1px solid #86EFAC",
+    borderRadius: 10,
+    background: "#F0FDF4",
+    color: "#166534",
+    fontWeight: 600,
   },
 
   hero: {

@@ -16,18 +16,21 @@ const incidentFields = `
              ELSE CONCAT(reporter.first_name, ' ', reporter.last_name) END AS reporter_name,
     ia.assigned_to,
     CONCAT(assignee.first_name, ' ', assignee.last_name) AS assigned_to_name,
+    assignee.role_id AS assigned_role_id,
+    r.role_name AS assigned_role,
     ia.assignment_note, ia.assigned_at, ia.completed_at,
-    (SELECT STRING_AGG(f.feedback, E'\\n' ORDER BY f.created_at DESC)
+    (SELECT STRING_AGG(f.feedback, E'\n' ORDER BY f.created_at DESC)
      FROM incident_feedback f
-     WHERE f.incident_id = i.id AND f.visible_to_reporter = TRUE) AS feedback`;
+    WHERE f.incident_id = i.id AND f.visible_to_reporter = TRUE) AS feedback`;
 
 const joins = `
     FROM incidents i
     LEFT JOIN incident_categories c ON c.id = i.category_id
-    LEFT JOIN users reporter ON reporter.id = i.reporter_id
+    LEFT JOIN users reporter ON reporter.user_id = i.reporter_id
     LEFT JOIN incident_assignments ia
         ON ia.incident_id = i.id AND ia.completed_at IS NULL
-    LEFT JOIN users assignee ON assignee.id = ia.assigned_to`;
+    LEFT JOIN users assignee ON assignee.user_id = ia.assigned_to
+    LEFT JOIN roles r ON r.role_id = assignee.role_id`;
 
 const createIncident = async (data) => {
     const result = await pool.query(

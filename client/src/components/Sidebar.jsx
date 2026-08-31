@@ -87,6 +87,11 @@ function Sidebar({ user, collapsed, setCollapsed, mobile, onNavigate }) {
                   if (mobile) setCollapsed(true);
                   return;
                 }
+                if (item === "Assigned Cases") {
+                  onNavigate?.("assigned-cases");
+                  if (mobile) setCollapsed(true);
+                  return;
+                }
                 document.querySelector(".incident-list")?.scrollIntoView({ behavior: "smooth" });
                 if (mobile) setCollapsed(true);
               }}

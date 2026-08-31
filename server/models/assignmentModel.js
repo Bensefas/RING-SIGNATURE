@@ -58,22 +58,21 @@ const getAssignmentsForUser = async (userId) => {
     `
     SELECT
       i.incident_id,
-      i.incident_number,
+      i.incident_id AS incident_number,
       i.reporter_id,
       i.category_id,
-      i.current_status_id,
+      i.status AS current_status,
+      i.status AS status_name,
       i.title,
       i.description,
       i.incident_location,
       i.incident_date,
       i.priority,
-      i.anonymous,
+      i.anonymity,
       i.created_at,
       i.updated_at,
 
-      c.category_name,
-
-      s.status_name,
+      c.name AS category_name,
 
       ia.id AS assignment_id,
       ia.assigned_to,
@@ -81,6 +80,8 @@ const getAssignmentsForUser = async (userId) => {
       ia.assignment_note,
       ia.assigned_at,
       ia.completed_at,
+      CONCAT(assignee.first_name, ' ', assignee.last_name) AS assigned_to_name,
+      r.role_name AS assigned_role,
 
       u.first_name AS reporter_first_name,
       u.last_name AS reporter_last_name,
@@ -92,13 +93,16 @@ const getAssignmentsForUser = async (userId) => {
       ON ia.incident_id = i.id
 
     LEFT JOIN incident_categories c
-      ON i.category_id = c.category_id
-
-    LEFT JOIN incident_statuses s
-      ON i.current_status_id = s.status_id
+      ON i.category_id = c.id
 
     LEFT JOIN users u
-      ON i.reporter_id = u.id
+      ON i.reporter_id = u.user_id
+
+    LEFT JOIN users assignee
+      ON assignee.user_id = ia.assigned_to
+
+    LEFT JOIN roles r
+      ON r.role_id = assignee.role_id
 
     WHERE ia.assigned_to = $1
 
@@ -153,7 +157,7 @@ const getAssignableUsers = async () => {
     WHERE r.id IN (5, 6, 7, 8, 9, 10, 11)
       AND u.is_active = TRUE
 
-    ORDER BY r.id, u.first_name, u.last_name
+    ORDER BY r.role_id, u.first_name, u.last_name
     `
   );
 
@@ -171,7 +175,7 @@ const updateIncidentStatus = async (incidentId, statusId) => {
     `
     UPDATE incidents
     SET
-      current_status_id = $1,
+      status = (SELECT status_name FROM incident_statuses WHERE status_id = $1 LIMIT 1),
       updated_at = NOW()
     WHERE id = $2
     `,
@@ -190,7 +194,8 @@ const getAssignment = async (incidentId, userId) => {
     `
     SELECT *
     FROM incident_assignments
-    WHERE incident_id = $1
+    INNER JOIN incidents i ON i.id = incident_assignments.incident_id
+    WHERE (i.incident_id = $1 OR CAST(i.id AS TEXT) = $1)
       AND assigned_to = $2
     ORDER BY assigned_at DESC
     LIMIT 1

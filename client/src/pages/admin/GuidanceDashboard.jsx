@@ -5,6 +5,7 @@ import axios from "axios";
 import Layout from "../../components/Layout";
 import {
   AlertCircle,
+  BarChart3,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -60,12 +61,16 @@ function getToken() {
 function normalizeStatus(value) {
   const v = String(value || "").toLowerCase();
 
-  if (v.includes("investig")) return "Under Investigation";
+  if (v.includes("under review")) return "Under Review";
+  if (v.includes("action taken")) return "Action Taken";
+  if (v.includes("assign")) return "Assigned";
+  if (v.includes("investig")) return "Investigating";
+  if (v.includes("submit")) return "Submitted";
   if (v.includes("resolv")) return "Resolved";
   if (v.includes("clos")) return "Closed";
   if (v.includes("reject")) return "Rejected";
 
-  return "Pending";
+  return "Submitted";
 }
 
 function normalize(item) {
@@ -180,14 +185,13 @@ export default function GuidanceDashboard() {
   };
 
   useEffect(() => {
-    fetchIncidents();
+    queueMicrotask(() => { void fetchIncidents(); });
   }, []);
 
   const stats = useMemo(() => {
     const active = incidents.filter(
       (x) =>
-        x.status === "Pending" ||
-        x.status === "Under Investigation"
+        ["Submitted", "Pending", "Assigned", "Under Review", "Investigating", "Action Taken"].includes(x.status)
     ).length;
 
     const resolved = incidents.filter(

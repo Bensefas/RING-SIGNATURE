@@ -48,7 +48,7 @@ export default function GuidanceCounsellingDashboard({ user, onLogout }) {
   };
 
   useEffect(() => {
-    fetchIncidents();
+    queueMicrotask(() => { void fetchIncidents(); });
   }, []);
 
   const count = (keyword) =>

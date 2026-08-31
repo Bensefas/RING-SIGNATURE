@@ -42,16 +42,16 @@ const assignIncident = async (req, res) => {
     const assigneeCheck = await pool.query(
       `
       SELECT
-        u.id,
+        u.user_id,
         u.first_name,
         u.last_name,
         u.is_active,
-        r.id AS role_id,
-        r.name AS role_name
+        r.role_id,
+        r.role_name
       FROM users u
       INNER JOIN roles r
-        ON u.role_id = r.id
-      WHERE u.id = $1
+        ON u.role_id = r.role_id
+      WHERE u.user_id = $1
       `,
       [assigned_to]
     );
@@ -102,10 +102,9 @@ const assignIncident = async (req, res) => {
       SELECT
         id,
         incident_id,
-        current_status_id
+        status
       FROM incidents
-      WHERE id = $1
-         OR incident_id = $1
+      WHERE incident_id = $1
       LIMIT 1
       `,
       [incident_id]
@@ -129,7 +128,6 @@ const assignIncident = async (req, res) => {
     const existingAssignment = await pool.query(
       `
       SELECT
-        id,
         assigned_to
       FROM incident_assignments
       WHERE incident_id = $1
@@ -330,10 +328,9 @@ const updateAssignmentStatus = async (req, res) => {
       SELECT
         id,
         incident_id,
-        current_status_id
+        status
       FROM incidents
-      WHERE id = $1
-         OR incident_id = $1
+      WHERE incident_id = $1
       LIMIT 1
       `,
       [incident_id]
@@ -349,15 +346,6 @@ const updateAssignmentStatus = async (req, res) => {
     const incident = incidentResult.rows[0];
 
 
-    const previousStatusResult = await pool.query(
-      `
-      SELECT status_name
-      FROM incident_statuses
-      WHERE status_id = $1
-      `,
-      [incident.current_status_id]
-    );
-
     const newStatusResult = await pool.query(
       `
       SELECT status_name
@@ -367,9 +355,7 @@ const updateAssignmentStatus = async (req, res) => {
       [status_id]
     );
 
-    const previousStatus =
-      previousStatusResult.rows[0]?.status_name ||
-      "Unknown";
+    const previousStatus = incident.status || "Unknown";
 
     const newStatus =
       newStatusResult.rows[0]?.status_name ||

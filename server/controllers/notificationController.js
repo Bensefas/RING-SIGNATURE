@@ -3,7 +3,7 @@ const pool = require("../config/db");
 const getMyNotifications = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, title, message, is_read, created_at
+      `SELECT notification_id AS id, title, message, is_read, created_at
        FROM notifications
        WHERE user_id = $1
        ORDER BY created_at DESC
@@ -21,7 +21,7 @@ const markNotificationRead = async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE notifications SET is_read = TRUE
-       WHERE id = $1 AND user_id = $2 RETURNING id`,
+       WHERE notification_id = $1 AND user_id = $2 RETURNING notification_id AS id`,
       [req.params.id, req.user.id]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, message: "Notification not found." });

@@ -68,7 +68,7 @@ const register = async (userData) => {
       department,
       faculty,
       phone,
-      matric_staff_id,
+      staff_student_id,
       is_active
     )
     VALUES
@@ -85,7 +85,7 @@ const register = async (userData) => {
       true
     )
     RETURNING
-      id,
+      user_id,
       role_id,
       first_name,
       last_name,
@@ -93,7 +93,7 @@ const register = async (userData) => {
       department,
       faculty,
       phone,
-      matric_staff_id,
+      staff_student_id,
       is_active,
       created_at
     `,
@@ -125,8 +125,8 @@ const login = async (email, password) => {
   const result = await pool.query(
     `
     SELECT
-      u.id,
-      u.matric_staff_id,
+      u.user_id,
+      u.staff_student_id,
       u.first_name,
       u.last_name,
       u.email,
@@ -136,10 +136,9 @@ const login = async (email, password) => {
       u.role_id,
       u.password_hash,
       u.is_active,
-      r.name AS role_name
+      r.role_name
     FROM users u
-    JOIN roles r
-      ON u.role_id = r.id
+    JOIN roles r ON u.role_id = r.role_id
     WHERE LOWER(u.email) = LOWER($1)
     `,
     [email]
@@ -171,7 +170,7 @@ const login = async (email, password) => {
   // Generate JWT
   const token = jwt.sign(
     {
-      user_id: user.id,
+      user_id: user.user_id,
       role_id: user.role_id,
       role_name: user.role_name
     },
