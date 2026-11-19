@@ -26,6 +26,11 @@ func (s *SmartContract) CreateIncident(
 	priority string,
 	anonymous bool,
 	ipfsHash string,
+	reportHash string,
+	signature string,
+	linkabilityTag string,
+	ringMembers string,
+	verification bool,
 ) error {
 
 	// Check whether the incident already exists.
@@ -40,22 +45,32 @@ func (s *SmartContract) CreateIncident(
 
 	now := time.Now().UTC().Format(time.RFC3339)
 
+	ledgerReporterID := reporterID
+	if anonymous {
+		ledgerReporterID = "anonymous"
+	}
+
 	incident := Incident{
-		IncidentID:     incidentID,
-		ReporterID:     reporterID,
-		Title:          title,
-		Description:    description,
-		Category:       category,
-		Location:       location,
-		DateReported:   dateReported,
-		Priority:       priority,
-		Status:         "Submitted",
-		AssignedTo:     "",
-		Anonymous:      anonymous,
-		IPFSHash:       ipfsHash,
-		BlockchainHash: "",
-		CreatedAt:      now,
-		LastUpdated:    now,
+		IncidentID:       incidentID,
+		ReporterID:       ledgerReporterID,
+		Title:            title,
+		Description:      description,
+		Category:         category,
+		Location:         location,
+		DateReported:     dateReported,
+		Priority:         priority,
+		Status:           "Submitted",
+		AssignedTo:       "",
+		Anonymous:        anonymous,
+		ReportHash:       reportHash,
+		Signature:        signature,
+		LinkabilityTag:   linkabilityTag,
+		RingMembers:      ringMembers,
+		Verification:     verification,
+		IPFSHash:         ipfsHash,
+		BlockchainHash:   "",
+		CreatedAt:        now,
+		LastUpdated:      now,
 	}
 
 	incidentJSON, err := json.Marshal(incident)

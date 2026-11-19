@@ -11,7 +11,8 @@ const getHistory = async (req, res) => {
         h.incident_id,
         h.previous_status,
         h.new_status,
-        h.changed_by,
+        CASE WHEN i.anonymous AND h.changed_by = i.reporter_id
+             THEN NULL ELSE h.changed_by END AS changed_by,
         h.comment,
         h.blockchain_tx_id,
         h.changed_at AS created_at

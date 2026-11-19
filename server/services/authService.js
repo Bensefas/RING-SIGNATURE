@@ -1,6 +1,24 @@
 const pool = require("../config/db");
 const jwt = require("jsonwebtoken");
 
+const ADMIN_ROLE_ID = 14;
+
+const validateSingleAdminRegistration = (userData, existingAdmin) => {
+  if (Number(userData?.role_id) !== ADMIN_ROLE_ID) {
+    return;
+  }
+
+  if (existingAdmin) {
+    throw new Error("Only one system admin is allowed.");
+  }
+};
+
+const validatePasswordConfirmation = (password, confirmPassword) => {
+  if (!confirmPassword || password !== confirmPassword) {
+    throw new Error("Passwords do not match.");
+  }
+};
+
 /**
  * Register a new user
  */
@@ -13,6 +31,7 @@ const register = async (userData) => {
     email,
     phone,
     password,
+    confirm_password,
     role_id,
     department,
     faculty
@@ -27,10 +46,12 @@ const register = async (userData) => {
     );
   }
 
+  validatePasswordConfirmation(password, confirm_password);
+
   // Check if email already exists
   const existing = await pool.query(
     `
-    SELECT id
+    SELECT user_id
     FROM users
     WHERE LOWER(email) = LOWER($1)
     `,
@@ -41,12 +62,27 @@ const register = async (userData) => {
     throw new Error("Email already exists.");
   }
 
+  // Enforce a single system admin account.
+  if (Number(role_id) === ADMIN_ROLE_ID) {
+    const adminCheck = await pool.query(
+      `
+      SELECT user_id
+      FROM users
+      WHERE role_id = $1
+      LIMIT 1
+      `,
+      [ADMIN_ROLE_ID]
+    );
+
+    validateSingleAdminRegistration({ role_id }, adminCheck.rows[0] || null);
+  }
+
   // Confirm that the selected role exists
   const roleResult = await pool.query(
     `
-    SELECT id, name
+    SELECT role_id, role_name
     FROM roles
-    WHERE id = $1
+    WHERE role_id = $1
     `,
     [role_id]
   );
@@ -192,5 +228,7 @@ const login = async (email, password) => {
 
 module.exports = {
   register,
-  login
+  login,
+  validateSingleAdminRegistration,
+  validatePasswordConfirmation
 };

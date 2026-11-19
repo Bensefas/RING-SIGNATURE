@@ -87,6 +87,10 @@ CREATE TABLE users(
 
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS ux_users_single_admin
+ON users (role_id)
+WHERE role_id = 14;
+
 CREATE INDEX idx_users_email
 ON users(email);
 
@@ -95,6 +99,42 @@ ON users(role_id);
 
 CREATE INDEX idx_users_unit
 ON users(unit_id);
+
+-- =====================================================
+-- ANONYMOUS REPORTING REGISTRY
+-- =====================================================
+
+CREATE TABLE anonymous_public_keys(
+    key_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE,
+    public_key TEXT NOT NULL,
+    key_algorithm VARCHAR(40) NOT NULL DEFAULT 'legacy-sha256',
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    revoked_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_anonymous_key_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_anonymous_key_status
+ON anonymous_public_keys(status);
+
+CREATE UNIQUE INDEX ux_anonymous_public_keys_active_key
+ON anonymous_public_keys(public_key)
+WHERE status = 'active' AND key_algorithm = 'LSAG-secp256k1-v1';
+
+CREATE TABLE incident_signature_keys(
+    user_id UUID PRIMARY KEY,
+    public_key_jwk JSONB NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_incident_signature_key_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
 
 -- =====================================================
 -- INCIDENT CATEGORIES
@@ -157,6 +197,18 @@ CREATE TABLE incidents(
 
     anonymous BOOLEAN DEFAULT FALSE,
 
+    report_hash TEXT,
+
+    signature TEXT,
+
+    signature_algorithm VARCHAR(80),
+
+    signature_public_key JSONB,
+
+    signature_verified BOOLEAN NOT NULL DEFAULT FALSE,
+
+    signature_nonce VARCHAR(32),
+
     blockchain_hash TEXT,
 
     blockchain_tx_id TEXT,
@@ -178,6 +230,40 @@ CREATE TABLE incidents(
         REFERENCES incident_statuses(status_id)
 
 );
+
+CREATE TABLE anonymous_reports(
+    anonymous_report_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    incident_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    report_hash TEXT NOT NULL,
+    ring_members JSONB NOT NULL DEFAULT '[]'::jsonb,
+    signature TEXT NOT NULL,
+    linkability_tag TEXT NOT NULL,
+    linkability_scope TEXT NOT NULL,
+    verification_result BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_anonymous_report_incident
+        FOREIGN KEY(incident_id)
+        REFERENCES incidents(incident_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_anonymous_report_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_anonymous_report_hash
+ON anonymous_reports(report_hash);
+
+CREATE INDEX idx_anonymous_report_linkability
+ON anonymous_reports(linkability_tag);
+
+CREATE INDEX idx_anonymous_report_scope_linkability
+ON anonymous_reports(linkability_scope, linkability_tag);
+
+CREATE UNIQUE INDEX ux_incidents_signature_nonce
+ON incidents(signature_nonce)
+WHERE signature_nonce IS NOT NULL;
 
 CREATE INDEX idx_incident_number
 ON incidents(incident_number);

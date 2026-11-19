@@ -735,6 +735,34 @@ p {
   line-height: 1.5;
 }
 
+.report-incident-page input,
+.report-incident-page select,
+.report-incident-page textarea {
+  color-scheme: dark;
+}
+
+.report-incident-page input::placeholder,
+.report-incident-page textarea::placeholder {
+  color: #64748b;
+}
+
+.report-incident-page input:focus-visible,
+.report-incident-page select:focus-visible,
+.report-incident-page textarea:focus-visible,
+.report-incident-page button:focus-visible {
+  outline: 2px solid #00c995;
+  outline-offset: 2px;
+}
+
+.report-form-header button:hover,
+.report-form-actions button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.report-form-actions button:disabled {
+  cursor: wait;
+}
+
 @media (max-width: 700px) {
   .servicom-hero { align-items: flex-start; flex-direction: column; }
   .servicom-metrics { grid-template-columns: 1fr; }
@@ -839,6 +867,37 @@ p {
   .hod-hero { align-items: flex-start; flex-direction: column; }
   .hod-refresh { width: 100%; justify-content: center; }
   .hod-metrics { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .report-incident-page {
+    padding: 18px !important;
+    border-radius: 12px !important;
+  }
+
+  .report-form-header {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+
+  .report-form-header button {
+    align-self: flex-start;
+  }
+
+  .report-form-columns {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0 !important;
+  }
+
+  .report-form-actions {
+    align-items: stretch !important;
+    flex-direction: column-reverse;
+  }
+
+  .report-form-actions button {
+    width: 100%;
+    min-height: 46px;
+  }
 }
 
 .incident-history {

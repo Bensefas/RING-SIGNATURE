@@ -59,7 +59,7 @@ const getAssignmentsForUser = async (userId) => {
     SELECT
       i.incident_id,
       i.incident_id AS incident_number,
-      i.reporter_id,
+      CASE WHEN i.anonymity THEN NULL ELSE i.reporter_id END AS reporter_id,
       i.category_id,
       i.status AS current_status,
       i.status AS status_name,
@@ -83,9 +83,9 @@ const getAssignmentsForUser = async (userId) => {
       CONCAT(assignee.first_name, ' ', assignee.last_name) AS assigned_to_name,
       r.role_name AS assigned_role,
 
-      u.first_name AS reporter_first_name,
-      u.last_name AS reporter_last_name,
-      u.email AS reporter_email
+      CASE WHEN i.anonymity THEN NULL ELSE u.first_name END AS reporter_first_name,
+      CASE WHEN i.anonymity THEN NULL ELSE u.last_name END AS reporter_last_name,
+      CASE WHEN i.anonymity THEN NULL ELSE u.email END AS reporter_email
 
     FROM incident_assignments ia
 

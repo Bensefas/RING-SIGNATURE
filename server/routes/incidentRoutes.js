@@ -7,7 +7,9 @@ const authMiddleware = require("../middleware/authMiddleware");
 router.get("/categories", authMiddleware, incidentController.getCategories);
 router.get("/all", authMiddleware, incidentController.getAllIncidents);
 /* Student submits incident */
+router.put("/digital-signature/public-key", authMiddleware, incidentController.registerDigitalSigningKey);
 router.post("/", authMiddleware, incidentController.createIncident);
+router.post("/anonymous", authMiddleware, require("../controllers/anonymousController").submitAnonymousIncident);
 router.get("/assignable-users", authMiddleware, incidentController.getAssignableUsers);
 
 router.post("/:incidentId/assign", authMiddleware, incidentController.assignIncident);

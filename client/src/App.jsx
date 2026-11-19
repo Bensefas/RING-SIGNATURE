@@ -1,28 +1,17 @@
 import { Eye, EyeOff } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
 import StudentDashboard from "./pages/StudentDashboard";
-import HODDashboard from "./pages/HODDashboard";
-import DeanDashboard from "./pages/DeanDashboard";
-import DSADashboard from "./pages/DSADashboard";
-import SecurityDashboard from "./pages/SecurityDashboard";
-import ClinicDashboard from "./pages/ClinicDashboard";
-import CounsellingDashboard from "./pages/CounsellingDashboard";
-import DisciplinaryDashboard from "./pages/DisciplinaryDashboard";
-import ICTAdminDashboard from "./pages/ICTAdminDashboard";
-import DVCDashboard from "./pages/DVCDashboard";
-import VCDashboard from "./pages/VCDashboard";
-import SUGDashboard from "./pages/SUGDashboard";
-import SERVICOMDashboard from "./pages/ServicomDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 
 import ReportIncident from "./pages/ReportIncident";
 import MyIncidents from "./pages/MyIncidents";
 import IncidentDetails from "./pages/IncidentDetails";
-import MyAssignments from "./pages/MyAssignments";
 
-const API_URL = "http://localhost:5000";
+const API_URL = (
+  import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`
+).replace(/\/+$/, "");
 
 function App() {
   const [page, setPage] = useState("login");
@@ -35,7 +24,6 @@ function App() {
 
   const [studentPage, setStudentPage] = useState("dashboard");
   const [selectedIncident, setSelectedIncident] = useState(null);
-  const [showMyAssignments, setShowMyAssignments] = useState(false);
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -49,6 +37,7 @@ function App() {
     email: "",
     phone: "",
     password: "",
+    confirm_password: "",
     role_id: "1",
     unit_id: "1",
   });
@@ -96,7 +85,7 @@ function App() {
 
     try {
       const { data } = await axios.post(
-        `${API_URL}/api/auth/login`,
+        `${API_URL}/auth/login`,
         {
           email: loginData.email.trim(),
           password: loginData.password,
@@ -138,12 +127,17 @@ function App() {
   const handleRegister = async (e) => {
     e.preventDefault();
 
+    if (registerData.password !== registerData.confirm_password) {
+      setMessage("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
     try {
       const { data } = await axios.post(
-        `${API_URL}/api/auth/register`,
+        `${API_URL}/auth/register`,
         registerData
       );
 
@@ -155,6 +149,11 @@ function App() {
         email: registerData.email,
         password: "",
       });
+      setRegisterData((current) => ({
+        ...current,
+        password: "",
+        confirm_password: "",
+      }));
 
       setPage("login");
     } catch (err) {
@@ -174,7 +173,7 @@ function App() {
    * LOGOUT
    * ============================================================
    */
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
@@ -182,30 +181,17 @@ function App() {
     setPage("login");
     setStudentPage("dashboard");
     setSelectedIncident(null);
-    setShowMyAssignments(false);
     setMessage("");
-  };
+  }, []);
 
   /*
    * ============================================================
    * ROLE ID
    *
-   * DATABASE ROLE MAPPING
+   * SUPPORTED ROLE MAPPING
    *
-   * 1  STUDENT
-   * 2  STAFF / ICT
-   * 3  DVC
-   * 4  VC
-   * 5  HOD
-   * 6  DEAN
-   * 7  DSA
-   * 8  SECURITY
-   * 9  DISCIPLINARY
-   * 10 GUIDANCE
-   * 11 CLINIC
-   * 12 SUG
-   * 13 SERVICOM
-   * 14 ADMIN
+   * 1 STUDENT
+   * 14 SYSTEM ADMINISTRATOR
    * ============================================================
    */
   const roleId = loggedInUser
@@ -219,20 +205,6 @@ function App() {
    */
   if (page === "dashboard" && loggedInUser) {
 
-    if (showMyAssignments) {
-      return (
-        <MyAssignments
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onBack={() => setShowMyAssignments(false)}
-        />
-      );
-    }
-
-    const handleAssignedCasesNavigate = () => {
-      setShowMyAssignments(true);
-    };
-
     /*
      * ----------------------------------------------------------
      * ROLE 1 — STUDENT
@@ -244,6 +216,7 @@ function App() {
           <ReportIncident
             user={loggedInUser}
             onLogout={handleLogout}
+            onBack={() => setStudentPage("dashboard")}
             onNavigate={(nextPage) => setStudentPage(nextPage)}
             onSubmitted={(text) => {
               setDashboardMessage(text);
@@ -297,187 +270,7 @@ function App() {
 
     /*
      * ----------------------------------------------------------
-     * ROLE 2 — STAFF / ICT
-     * ----------------------------------------------------------
-     */
-    if (roleId === 2) {
-      return (
-        <ICTAdminDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 3 — DVC
-     * ----------------------------------------------------------
-     */
-    if (roleId === 3) {
-      return (
-        <DVCDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onNavigate={handleAssignedCasesNavigate}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 4 — VC
-     * ----------------------------------------------------------
-     */
-    if (roleId === 4) {
-      return (
-        <VCDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onNavigate={handleAssignedCasesNavigate}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 5 — HOD
-     * ----------------------------------------------------------
-     */
-    if (roleId === 5) {
-      return (
-        <HODDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onNavigate={handleAssignedCasesNavigate}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 6 — FACULTY DEAN
-     * ----------------------------------------------------------
-     */
-    if (roleId === 6) {
-      return (
-        <DeanDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onNavigate={handleAssignedCasesNavigate}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 7 — DSA
-     * ----------------------------------------------------------
-     *
-    * DSA uses the dedicated student-affairs dashboard.
-     * ----------------------------------------------------------
-     */
-    if (roleId === 7) {
-      return (
-        <DSADashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onNavigate={handleAssignedCasesNavigate}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 8 — SECURITY OFFICER
-     * ----------------------------------------------------------
-     */
-    if (roleId === 8) {
-      return (
-        <SecurityDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onNavigate={handleAssignedCasesNavigate}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 9 — DISCIPLINARY CHAIR
-     * ----------------------------------------------------------
-     */
-    if (roleId === 9) {
-      return (
-        <DisciplinaryDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onNavigate={handleAssignedCasesNavigate}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 10 — GUIDANCE / COUNSELLING
-     * ----------------------------------------------------------
-     */
-    if (roleId === 10) {
-      return (
-        <CounsellingDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onNavigate={handleAssignedCasesNavigate}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 11 — CLINIC
-     * ----------------------------------------------------------
-     */
-    if (roleId === 11) {
-      return (
-        <ClinicDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-          onNavigate={handleAssignedCasesNavigate}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 12 — SUG OBSERVER
-     * ----------------------------------------------------------
-     */
-    if (roleId === 12) {
-      return (
-        <SUGDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 13 — SERVICOM OBSERVER
-     * ----------------------------------------------------------
-     */
-    if (roleId === 13) {
-      return (
-        <SERVICOMDashboard
-          user={loggedInUser}
-          onLogout={handleLogout}
-        />
-      );
-    }
-
-    /*
-     * ----------------------------------------------------------
-     * ROLE 14 — ADMIN
+      * ROLE 14 — SYSTEM ADMINISTRATOR
      * ----------------------------------------------------------
      */
     if (roleId === 14) {
@@ -498,7 +291,7 @@ function App() {
       <RoleNotice
         user={loggedInUser}
         roleName={`ROLE ${roleId}`}
-        message="This role ID does not have a dashboard connected."
+        message="Only Student and System Administrator dashboards are available in this system."
         onLogout={handleLogout}
       />
     );
@@ -539,29 +332,30 @@ function App() {
                 required
               />
 
-              <input
-                style={styles.input}
-                type={showLoginPassword ? "text" : "password"}
-                placeholder="Password"
-                value={loginData.password}
-                onChange={(e) =>
-                  setLoginData({
-                    ...loginData,
-                    password: e.target.value,
-                  })
-                }
-                required
-              />
-
-              <button
-                type="button"
-                style={styles.passwordToggle}
-                aria-label={showLoginPassword ? "Hide password" : "Show password"}
-                onClick={() => setShowLoginPassword((visible) => !visible)}
-              >
-                {showLoginPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                {showLoginPassword ? "Hide password" : "Show password"}
-              </button>
+              <div style={styles.passwordField}>
+                <input
+                  style={{ ...styles.input, paddingRight: 48, marginBottom: 0 }}
+                  type={showLoginPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={loginData.password}
+                  onChange={(e) =>
+                    setLoginData({
+                      ...loginData,
+                      password: e.target.value,
+                    })
+                  }
+                  required
+                />
+                <button
+                  type="button"
+                  style={styles.passwordToggle}
+                  aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                  title={showLoginPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowLoginPassword((visible) => !visible)}
+                >
+                  {showLoginPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
 
               <button
                 style={styles.button}
@@ -654,28 +448,45 @@ function App() {
                 }
               />
 
+              <div style={styles.passwordField}>
+                <input
+                  style={{ ...styles.input, paddingRight: 48, marginBottom: 0 }}
+                  type={showRegisterPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={registerData.password}
+                  required
+                  onChange={(e) =>
+                    setRegisterData({
+                      ...registerData,
+                      password: e.target.value,
+                    })
+                  }
+                />
+                <button
+                  type="button"
+                  style={styles.passwordToggle}
+                  aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                  title={showRegisterPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowRegisterPassword((visible) => !visible)}
+                >
+                  {showRegisterPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+
               <input
                 style={styles.input}
-                type={showRegisterPassword ? "text" : "password"}
-                placeholder="Password"
-                value={registerData.password}
+                type="password"
+                placeholder="Confirm Password"
+                autoComplete="new-password"
+                value={registerData.confirm_password}
+                required
                 onChange={(e) =>
                   setRegisterData({
                     ...registerData,
-                    password: e.target.value,
+                    confirm_password: e.target.value,
                   })
                 }
               />
-
-              <button
-                type="button"
-                style={styles.passwordToggle}
-                aria-label={showRegisterPassword ? "Hide password" : "Show password"}
-                onClick={() => setShowRegisterPassword((visible) => !visible)}
-              >
-                {showRegisterPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                {showRegisterPassword ? "Hide password" : "Show password"}
-              </button>
 
               <button
                 style={styles.button}
@@ -849,21 +660,24 @@ const styles = {
   },
 
   passwordToggle: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    width: "100%",
-    marginTop: -7,
-    marginBottom: 17,
-    padding: "9px 10px",
-    border: "1px solid #c9dadd",
-    borderRadius: "9px",
-    background: "#eef8f7",
+    position: "absolute",
+    top: 8,
+    right: 8,
+    display: "grid",
+    placeItems: "center",
+    width: 34,
+    height: 34,
+    padding: 0,
+    border: "none",
+    borderRadius: "7px",
+    background: "transparent",
     color: "#0f766e",
     cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: 700,
+  },
+
+  passwordField: {
+    position: "relative",
+    marginBottom: 16,
   },
 
   registerButton: {

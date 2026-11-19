@@ -38,6 +38,7 @@ function Sidebar({ user, collapsed, setCollapsed, mobile, onNavigate }) {
 
   return (
     <div
+      className="app-sidebar"
       style={{
         ...styles.sidebar,
         width: mobile ? (collapsed ? 0 : 260) : collapsed ? 90 : 260,

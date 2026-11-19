@@ -46,6 +46,8 @@ INSERT INTO roles (role_id, role_name)
 VALUES (2, 'STAFF / ICT'), (5, 'HOD'), (10, 'GUIDANCE'), (11, 'CLINIC'), (12, 'SUG'), (14, 'ADMIN')
 ON CONFLICT (role_id) DO UPDATE SET role_name = EXCLUDED.role_name;
 
+DELETE FROM users WHERE role_id = 14 AND email <> 'admin@university.edu';
+
 INSERT INTO users (staff_student_id, first_name, last_name, email, password_hash, role_id, is_active)
 VALUES
   ('HOD-001', 'Head', 'Of Department', 'hod@university.edu', crypt('$($AccountPassword)', gen_salt('bf')), 5, TRUE),

@@ -12,6 +12,8 @@ const blockchainRoutes = require("./routes/blockchainRoutes");
 const hodRoutes = require("./routes/hodRoutes");
 const statusHistoryRoutes = require("./routes/statusHistoryRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const anonymousRoutes = require("./routes/anonymousRoutes");
+const auditRoutes = require("./routes/auditRoutes");
 
 const app = express();
 
@@ -122,6 +124,8 @@ Status History
 app.use("/api/history", statusHistoryRoutes);
 
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/anonymous", anonymousRoutes);
+app.use("/api/audit", auditRoutes);
 
 /*
 =========================================================

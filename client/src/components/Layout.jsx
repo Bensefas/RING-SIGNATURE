@@ -3,7 +3,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import IncidentList from "./IncidentList";
 
-function Layout({ user, onLogout, onNavigate, children }) {
+function Layout({ user, onLogout, onNavigate, children, showIncidentList = true }) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 992);
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 992);
 
@@ -126,7 +126,7 @@ function Layout({ user, onLogout, onNavigate, children }) {
   };
 
   return (
-    <div style={styles.wrapper}>
+    <div className={roleId === 14 ? "admin-layout" : undefined} style={styles.wrapper}>
 
       <Sidebar
         user={normalizedUser}
@@ -164,9 +164,9 @@ function Layout({ user, onLogout, onNavigate, children }) {
           setCollapsed={setCollapsed}
         />
 
-        <div style={styles.body}>
+        <div className={roleId === 14 ? "admin-layout-body" : undefined} style={styles.body}>
           {children}
-          {roleId >= 3 && roleId <= 14 && (
+          {showIncidentList && roleId >= 3 && roleId <= 14 && (
             <IncidentList role={roleId} user={normalizedUser} />
           )}
         </div>

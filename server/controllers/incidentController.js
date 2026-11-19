@@ -1,6 +1,10 @@
 const IncidentModel = require("../models/incidentModel");
+const IncidentSignatureModel = require("../models/incidentSignatureModel");
 const pool = require("../config/db");
 const blockchainService = require("../services/blockchainService");
+const { createAuditLog } = require("../services/auditLogService");
+const DigitalReportSignatureService = require("../services/digitalReportSignatureService");
+const getIncidentErrorResponse = require("../utils/incidentErrorResponse");
 
 const getUserId = (req) =>
   req.user?.userId || req.user?.user_id || req.user?.id;
@@ -23,14 +27,39 @@ const createIncident = async (req, res) => {
       incident_location,
       incident_date,
       priority,
-      anonymity = false,
+      signature,
+      reportHash,
+      nonce,
     } = req.body;
 
-    if (!category_id || !title || !description) {
+    if (req.body.anonymity === true) {
       return res.status(400).json({
         success: false,
-        message: "Category, title and description are required",
+        message: "Anonymous reports must use the anonymous ring-signature endpoint.",
       });
+    }
+    if (!category_id || !title || !description || !incident_location || !incident_date) {
+      return res.status(400).json({
+        success: false,
+        message: "Category, title, description, location and incident date are required.",
+      });
+    }
+
+    const publicKey = await IncidentSignatureModel.getPublicKey({ userId: reporterId });
+    if (!publicKey) {
+      return res.status(400).json({
+        success: false,
+        message: "Register a digital signing key before submitting this report.",
+      });
+    }
+
+    const verification = await DigitalReportSignatureService.verifyDigitalReportSignature({
+      report: { ...req.body, anonymity: false },
+      signature,
+      publicKey,
+    });
+    if (reportHash && reportHash !== verification.reportHash) {
+      return res.status(400).json({ success: false, message: "The report hash does not match the signed report." });
     }
 
     const incident = await IncidentModel.createIncident({
@@ -41,40 +70,69 @@ const createIncident = async (req, res) => {
       incident_location,
       incident_date,
       priority,
-      anonymity,
+      anonymity: false,
+      report_hash: verification.reportHash,
+      signature,
+      signature_algorithm: verification.algorithm,
+      signature_public_key: verification.publicKey,
+      signature_verified: verification.valid,
+      signature_nonce: nonce,
     });
 
     let blockchainTxId = null;
+    let blockchainWarning = null;
     try {
       const anchor = await blockchainService.anchorIncidentCreation(incident);
       blockchainTxId = anchor.txId;
       await pool.query(
-        "UPDATE incidents SET blockchain_tx_id = $1 WHERE id = $2",
-        [blockchainTxId, incident.id]
+        "UPDATE incidents SET blockchain_tx_id = $1 WHERE incident_id = $2",
+        [blockchainTxId, incident.incident_id]
       );
       incident.blockchain_tx_id = blockchainTxId;
     } catch (anchorError) {
       console.error("Incident creation anchor failed:", anchorError);
+      blockchainWarning = "The report was saved, but blockchain anchoring failed.";
     }
 
     await pool.query(
       `INSERT INTO incident_status_history
         (incident_id, previous_status, new_status, changed_by, comment, blockchain_tx_id)
        VALUES ($1, NULL, 'SUBMITTED', $2, $3, $4)`,
-      [incident.id, reporterId, "Incident submitted", blockchainTxId]
+      [incident.incident_id, reporterId, "Incident submitted", blockchainTxId]
     );
 
     res.status(201).json({
       success: true,
-      message: "Incident reported successfully",
+      message: "Incident digitally signed and reported successfully.",
       incident,
+      blockchainWarning,
     });
   } catch (error) {
     console.error("Create incident error:", error);
-    res.status(500).json({
+    const response = error.code === "23505"
+      ? { statusCode: 409, message: error.message }
+      : getIncidentErrorResponse(error);
+    res.status(response.statusCode).json({
       success: false,
-      message: error.message,
+      message: response.message,
     });
+  }
+};
+
+const registerDigitalSigningKey = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required." });
+    }
+
+    const publicKey = await DigitalReportSignatureService.validatePublicJwk(req.body?.publicKey);
+    await IncidentSignatureModel.registerPublicKey({ userId, publicKey });
+    return res.status(200).json({ success: true, message: "Digital signing key registered." });
+  } catch (error) {
+    const response = getIncidentErrorResponse(error);
+    if (response.statusCode >= 500) console.error("Digital signing key registration failed:", error);
+    return res.status(response.statusCode).json({ success: false, message: response.message });
   }
 };
 
@@ -91,9 +149,10 @@ const getMyIncidents = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
+    const response = getIncidentErrorResponse(error);
+    res.status(response.statusCode).json({
       success: false,
-      message: error.message,
+      message: response.message,
     });
   }
 };
@@ -120,9 +179,10 @@ const getMyIncident = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
+    const response = getIncidentErrorResponse(error);
+    res.status(response.statusCode).json({
       success: false,
-      message: error.message,
+      message: response.message,
     });
   }
 };
@@ -138,9 +198,10 @@ const getCategories = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
+    const response = getIncidentErrorResponse(error);
+    res.status(response.statusCode).json({
       success: false,
-      message: error.message,
+      message: response.message,
     });
   }
 };
@@ -213,26 +274,71 @@ const assignIncident = async (req, res) => {
 
 const updateIncidentStatus = async (req, res) => {
   try {
-    const actionRoles = [5, 6, 7, 8, 9, 10, 11];
-    if (!actionRoles.includes(Number(req.user.role_id))) {
-      return res.status(403).json({ success: false, message: "Your role cannot update incident status." });
-    }
+    const roleId = Number(req.user.role_id);
+    const mayManageAll = [3, 4, 12, 13, 14].includes(roleId);
     const { new_status, comment } = req.body;
-    const incident = await getInternalIncident(req.params.incidentId);
-    const assignment = incident && await pool.query(
-        `SELECT id FROM incident_assignments
-         WHERE incident_id = $1 AND assigned_to = $2 AND completed_at IS NULL
-         ORDER BY assigned_at DESC LIMIT 1`,
-      [incident.id, req.user.id]
-    );
-    if (!incident || !assignment?.rows[0]) {
-      return res.status(403).json({ success: false, message: "You are not the active assignee for this incident." });
-    }
-    if (!new_status) {
+    const statusName = String(new_status || "").trim().replace(/[_-]+/g, " ");
+    const statusAliases = {
+      new: "Pending",
+      assigned: "Under Review",
+      "in progress": "Under Review",
+      investigating: "Under Review",
+      closed: "Resolved",
+      complete: "Resolved",
+      completed: "Resolved",
+    };
+    const requestedStatus = statusAliases[statusName.toLowerCase()] || statusName;
+    if (!requestedStatus) {
       return res.status(400).json({ success: false, message: "new_status is required." });
     }
+
+    const incidentResult = await pool.query(
+      `SELECT i.incident_id, i.reporter_id, i.current_status_id, i.blockchain_tx_id,
+              s.status_name AS current_status
+       FROM incidents i
+       LEFT JOIN incident_statuses s ON s.status_id = i.current_status_id
+       WHERE i.incident_id = $1`,
+      [req.params.incidentId]
+    );
+    const incident = incidentResult.rows[0];
+    if (!incident) {
+      return res.status(404).json({ success: false, message: "Incident not found." });
+    }
+
+    if (!mayManageAll) {
+      const assignment = await pool.query(
+        `SELECT assignment_id
+         FROM incident_assignments
+         WHERE incident_id = $1 AND assigned_to = $2 AND completed_at IS NULL
+         ORDER BY assigned_at DESC
+         LIMIT 1`,
+        [incident.incident_id, req.user.id]
+      );
+      if (!assignment.rows[0]) {
+        return res.status(403).json({ success: false, message: "You are not authorized to update this incident." });
+      }
+    }
+
+    const statusResult = await pool.query(
+      `SELECT status_id, status_name
+       FROM incident_statuses
+       WHERE LOWER(status_name) = LOWER($1)
+       LIMIT 1`,
+      [requestedStatus]
+    );
+    const nextStatus = statusResult.rows[0];
+    if (!nextStatus) {
+      return res.status(400).json({ success: false, message: "That incident status is not supported." });
+    }
+    if (Number(nextStatus.status_id) === Number(incident.current_status_id)) {
+      return res.json({ success: true, status: nextStatus.status_name, unchanged: true });
+    }
+
     const anchor = await blockchainService.anchorStatusChange(
-      incident.id, incident.status, new_status, req.user.id
+      incident.incident_id,
+      incident.current_status,
+      nextStatus.status_name,
+      req.user.id
     ).catch((error) => {
       console.error("Status anchor failed:", error);
       return null;
@@ -240,15 +346,48 @@ const updateIncidentStatus = async (req, res) => {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      await client.query("UPDATE incidents SET status = $1, updated_at = NOW(), blockchain_tx_id = COALESCE($2, blockchain_tx_id) WHERE id = $3", [new_status, anchor?.txId || null, incident.id]);
+      await client.query(
+        `UPDATE incidents
+         SET current_status_id = $1, updated_at = NOW(),
+             blockchain_tx_id = COALESCE($2, blockchain_tx_id)
+         WHERE incident_id = $3`,
+        [nextStatus.status_id, anchor?.txId || null, incident.incident_id]
+      );
       await client.query(
         `INSERT INTO incident_status_history
-          (incident_id, previous_status, new_status, changed_by, comment, blockchain_tx_id)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [incident.id, incident.status, new_status, req.user.id, comment || null, anchor?.txId || null]
+          (incident_id, status_id, previous_status, new_status, changed_by, comment, blockchain_tx_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          incident.incident_id,
+          nextStatus.status_id,
+          incident.current_status,
+          nextStatus.status_name,
+          req.user.id,
+          comment || null,
+          anchor?.txId || null,
+        ]
+      );
+      await createAuditLog({
+        incidentId: incident.incident_id,
+        userId: req.user.id,
+        action: "Incident status updated",
+        details: `${incident.current_status || "Unknown"} to ${nextStatus.status_name}${comment ? `: ${comment}` : ""}`,
+      }, client);
+      await client.query(
+        `INSERT INTO notifications (user_id, title, message)
+         VALUES ($1, $2, $3)`,
+        [
+          incident.reporter_id,
+          "Incident status updated",
+          `The status of incident ${incident.incident_id} is now ${nextStatus.status_name}.`,
+        ]
       );
       await client.query("COMMIT");
-      return res.json({ success: true, status: new_status, blockchain_tx_id: anchor?.txId || null });
+      return res.json({
+        success: true,
+        status: nextStatus.status_name,
+        blockchain_tx_id: anchor?.txId || null,
+      });
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
@@ -426,6 +565,7 @@ const getAllIncidents = async (req, res) => {
 
 module.exports = {
   createIncident,
+  registerDigitalSigningKey,
   getMyIncidents,
   getMyIncident,
   getCategories,

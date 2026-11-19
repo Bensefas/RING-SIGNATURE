@@ -2,6 +2,10 @@ import { Bell, LogOut, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_URL = (
+  import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`
+).replace(/\/+$/, "");
+
 function Topbar({
   user,
   onLogout,
@@ -15,7 +19,7 @@ function Topbar({
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    axios.get("http://localhost:5000/api/notifications", {
+    axios.get(`${API_URL}/notifications`, {
       headers: { Authorization: `Bearer ${token}` },
     }).then((response) => setNotifications(response.data.data || []))
       .catch(() => setNotifications([]));
@@ -29,7 +33,7 @@ function Topbar({
       notifications
         .filter((notification) => !notification.is_read)
         .map((notification) => axios.patch(
-          `http://localhost:5000/api/notifications/${notification.id}/read`,
+          `${API_URL}/notifications/${notification.id}/read`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         ).catch(() => null))
@@ -49,7 +53,7 @@ function Topbar({
           <Menu size={20} />
         </button>
 
-        <h2 style={styles.title}>{pageTitle}</h2>
+        {Number(user?.role_id) !== 14 && <h2 style={styles.title}>{pageTitle}</h2>}
       </div>
 
       <div className="app-topbar-right" style={styles.right}>
@@ -67,13 +71,13 @@ function Topbar({
             {unread > 0 && <span style={styles.badge}>{unread}</span>}
           </button>
           {notificationsOpen && (
-            <div style={styles.notificationMenu}>
+            <div className="app-notification-menu" style={styles.notificationMenu}>
               {notifications.length > 0 ? notifications.slice(0, 5).map((notification) => (
-                  <div key={notification.id} style={styles.notificationItem}>
+                  <div className="app-notification-item" key={notification.id} style={styles.notificationItem}>
                     <strong>{notification.title}</strong>
                     <span>{notification.message}</span>
                   </div>
-                )) : <div style={styles.notificationItem}>No notifications</div>}
+                )) : <div className="app-notification-item" style={styles.notificationItem}>No notifications</div>}
             </div>
           )}
         </div>

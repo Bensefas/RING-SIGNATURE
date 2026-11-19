@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = (
+  import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`
+).replace(/\/+$/, "");
 const ACTION_ROLES = [5, 6, 7, 8, 9, 10, 11];
 
 function IncidentActionPanel({ role, userId, incident, onChanged }) {

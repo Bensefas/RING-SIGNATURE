@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Layout from "../components/Layout";
 import DashboardCard from "../components/DashboardCard";
+import { ReporterEvidenceRequests } from "../components/EvidenceRequestPanels";
 
 import {
   FileText,
@@ -20,7 +21,9 @@ import {
   Tooltip,
 } from "recharts";
 
-const API = "http://localhost:5000";
+const API_URL = (
+  import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`
+).replace(/\/+$/, "");
 
 function StudentDashboard({ user, onLogout, onNavigate, dashboardMessage, onMessageShown }) {
   const [incidents, setIncidents] = useState([]);
@@ -45,7 +48,7 @@ function StudentDashboard({ user, onLogout, onNavigate, dashboardMessage, onMess
         return;
       }
 
-      const response = await axios.get(`${API}/api/incidents/my`, {
+      const response = await axios.get(`${API_URL}/incidents/my`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -155,7 +158,6 @@ function StudentDashboard({ user, onLogout, onNavigate, dashboardMessage, onMess
         {/* HERO SECTION */}
         <section style={styles.hero}>
           <div style={styles.heroContent}>
-            <h1 style={styles.heroTitle}>Student Portal</h1>
 
             <p style={styles.heroText}>
               Submit incidents securely, upload evidence to IPFS,
@@ -206,6 +208,8 @@ function StudentDashboard({ user, onLogout, onNavigate, dashboardMessage, onMess
             color="#10B981"
           />
         </section>
+
+        <ReporterEvidenceRequests />
 
         {/* ERROR MESSAGE */}
         {error && (

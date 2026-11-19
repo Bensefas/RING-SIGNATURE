@@ -12,9 +12,10 @@ const saveEvidence = async (data) => {
             stored_filename,
             mime_type,
             file_size,
-            ipfs_cid
+            ipfs_cid,
+            file_hash
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
         RETURNING *;
         `,
         [
@@ -24,7 +25,8 @@ const saveEvidence = async (data) => {
             data.stored_filename,
             data.mime_type,
             data.file_size,
-            data.ipfs_cid
+            data.ipfs_cid,
+            data.file_hash || null
         ]
     );
 

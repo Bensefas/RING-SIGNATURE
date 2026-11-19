@@ -61,17 +61,31 @@ async function submit(transactionName, args) {
 }
 
 async function anchorIncidentCreation(incident) {
+  const reporterId = incident.anonymity ? "anonymous" : (incident.reporter_id || "unknown");
+  const reportHash = incident.report_hash || "";
+  const signature = incident.signature || "";
+  const linkabilityTag = incident.linkability_tag || "";
+  const ringMembers = Array.isArray(incident.ring_members)
+    ? JSON.stringify(incident.ring_members)
+    : (incident.ring_members || "[]");
+  const verification = Boolean(incident.verification_result || incident.signature_verified || incident.signature);
+
   const txId = await submit("CreateIncident", [
     incident.incident_id,
-    incident.reporter_id,
+    reporterId,
     incident.title,
     incident.description,
-    incident.category_id,
+    String(incident.category_id || ""),
     incident.incident_location || "",
     incident.incident_date || "",
     incident.priority || "Medium",
-    incident.anonymity,
-    ""
+    String(Boolean(incident.anonymity)),
+    "",
+    reportHash,
+    signature,
+    linkabilityTag,
+    ringMembers,
+    String(verification)
   ]);
   return { txId, mock: false };
 }
